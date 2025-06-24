@@ -1,0 +1,69 @@
+# compiled output
+/dist
+/node_modules
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tests
+/coverage
+/.nyc_output
+
+# 项目总结文件夹 - 不需要提交
+项目总结/
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# AWS SAM
+.aws-sam/
+samconfig.toml
+
+# 环境变量
+.env
+.env.*
+!.env.example
+
+# Prisma
+/generated/prisma
+
+# 临时目录
+/mini-lambda
+/optimized
+/tmp
+
+# 临时文件
+response.json
+
+# 打包文件
+*.zip
+*.tgz
+
+# 数据库
+*.sqlite
+*.db
+
+/项目总结

@@ -1,0 +1,246 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  NestJS博客系统 - 使用SAM部署，包含GitHub仓库查询功能 (版本: 1.0.1)
+
+# AWS部署区域：ap-southeast-2（澳大利亚悉尼），与数据库同区域
+
+# 参数
+Parameters:
+  NodeEnv:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - test
+      - prod
+    Description: 运行环境
+  GitHubToken:
+    Type: String
+    NoEcho: true
+    Description: GitHub Personal Access Token
+
+# 全局配置
+Globals:
+  Function:
+    Timeout: 60  # 增加Lambda函数超时时间到60秒
+    MemorySize: 512  # 增加Lambda内存到512MB
+    Tracing: Active  # 启用X-Ray跟踪
+  Api:
+    Cors:  # API Gateway跨域配置
+      AllowMethods: "'GET,POST,OPTIONS,PUT,DELETE'"
+      AllowHeaders: "'Content-Type,Authorization'"
+      AllowOrigin: "'*'"
+
+# 资源定义
+Resources:
+  # API Gateway
+  NestJSBlogApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      # 添加API Gateway超时配置
+      GatewayResponses:
+        DEFAULT_5XX:
+          ResponseTemplates:
+            application/json: '{"error": "内部服务器错误，请稍后再试"}'
+      # 延长API超时时间
+      EndpointConfiguration: REGIONAL
+
+  # VPC配置
+  NestJSBlogVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: NestJSBlogVPC
+
+  # 内部子网1
+  InternalSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref NestJSBlogVPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      Tags:
+        - Key: Name
+          Value: NestJSBlog-Internal-1
+
+  # 内部子网2
+  InternalSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref NestJSBlogVPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      Tags:
+        - Key: Name
+          Value: NestJSBlog-Internal-2
+
+  # 内部子网3
+  InternalSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref NestJSBlogVPC
+      CidrBlock: 10.0.3.0/24
+      AvailabilityZone: !Select [ 2, !GetAZs '' ]
+      Tags:
+        - Key: Name
+          Value: NestJSBlog-Internal-3
+
+  # 路由表
+  InternalRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref NestJSBlogVPC
+      Tags:
+        - Key: Name
+          Value: NestJSBlog-Internal-RT
+
+  # 为每个子网关联路由表
+  InternalSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref InternalSubnet1
+      RouteTableId: !Ref InternalRouteTable
+
+  InternalSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref InternalSubnet2
+      RouteTableId: !Ref InternalRouteTable
+
+  InternalSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref InternalSubnet3
+      RouteTableId: !Ref InternalRouteTable
+
+  # 添加Internet网关
+  NestJSBlogInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: NestJSBlog-IGW
+
+  # 将Internet网关附加到VPC
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref NestJSBlogVPC
+      InternetGatewayId: !Ref NestJSBlogInternetGateway
+
+  # 添加默认路由到Internet网关
+  PublicRouteToInternet:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref InternalRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref NestJSBlogInternetGateway
+
+  # Lambda执行角色（具有VPC访问权限）
+  NestJSBlogFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole'
+
+  # Lambda函数
+  NestJSBlogFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./dist/
+      Handler: lambda.handler
+      Runtime: nodejs18.x
+      Role: !GetAtt NestJSBlogFunctionRole.Arn
+      # 设置超时时间为60秒，因为数据库连接可能需要一些时间
+      Timeout: 60
+      # 设置内存大小
+      MemorySize: 512
+      # 移除VPC配置，让Lambda函数可以通过公网访问数据库
+      # 这要求数据库安全组允许来自互联网的访问
+      Environment:
+        Variables:
+          NODE_ENV: !Ref NodeEnv
+          VERSION: "1.0.1"
+          # 添加数据库连接和GitHub令牌配置
+          DATABASE_URL: "postgresql://postgres:PangFeng123456@pf-ai-bff.cluster-cfsuogce0qm2.ap-southeast-2.rds.amazonaws.com:5432/blog?sslmode=require&connection_limit=5&pool_timeout=10&connect_timeout=5"
+          DATABASE_URL_READER: "postgresql://postgres:PangFeng123456@pf-ai-bff.cluster-ro-cfsuogce0qm2.ap-southeast-2.rds.amazonaws.com:5432/blog?sslmode=require&connection_limit=10&pool_timeout=10&connect_timeout=5"
+          GITHUB_TOKEN: !Ref GitHubToken
+          PORT: "3000"
+          AURORA_WARMUP: "true"
+      # API Gateway集成
+      Events:
+        AnyRequest:
+          Type: Api
+          Properties:
+            RestApiId: !Ref NestJSBlogApi
+            Path: /{proxy+}
+            Method: ANY
+
+  # Lambda安全组
+  NestJSBlogSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for NestJS Blog Lambda function
+      VpcId: !Ref NestJSBlogVPC
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+  # CloudFront分配
+  NestJSBlogCloudFront:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Origins:
+          - DomainName: !Sub "${NestJSBlogApi}.execute-api.${AWS::Region}.amazonaws.com"
+            Id: NestJSBlogAPI
+            OriginPath: /Prod
+            CustomOriginConfig:
+              HTTPPort: 80
+              HTTPSPort: 443
+              OriginProtocolPolicy: https-only
+        DefaultCacheBehavior:
+          TargetOriginId: NestJSBlogAPI
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: ['GET', 'HEAD', 'OPTIONS', 'PUT', 'POST', 'PATCH', 'DELETE']
+          CachedMethods: ['GET', 'HEAD']
+          ForwardedValues:
+            QueryString: true
+            Cookies:
+              Forward: all
+            Headers:
+              - Authorization
+          # 禁用缓存，确保实时响应
+          DefaultTTL: 0
+          MinTTL: 0
+          MaxTTL: 0
+
+# 输出值
+Outputs:
+  NestJSBlogApi:
+    Description: "API Gateway端点URL"
+    Value: !Sub "https://${NestJSBlogApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/api"
+  
+  NestJSBlogFunction:
+    Description: "NestJS Blog Lambda函数ARN"
+    Value: !GetAtt NestJSBlogFunction.Arn
+  
+  NestJSBlogCloudFrontURL:
+    Description: "CloudFront分配URL"
+    Value: !Sub "https://${NestJSBlogCloudFront.DomainName}/api"
