@@ -18,7 +18,11 @@ let cachedServer: Handler;
 
 // 创建 Express 应用并初始化 NestJS
 async function bootstrapServer(): Promise<Handler> {
+  // 添加日志记录Lambda冷启动情况
+  console.log('Lambda冷启动开始:', new Date().toISOString());
+
   if (!cachedServer) {
+    console.log('初始化Express和NestJS应用');
     const expressApp = express();
     const nestApp = await NestFactory.create(
       AppModule,
@@ -50,11 +54,28 @@ export const handler: Handler = async (
   callback: any,
 ): Promise<APIGatewayProxyResult> => {
   // 为了调试，可以记录请求信息
-  console.log('Event: ', JSON.stringify(event));
+  console.log('收到新请求:', new Date().toISOString());
+  console.log('请求路径:', event.path);
+  console.log('请求方法:', event.httpMethod);
+  console.log('请求头:', JSON.stringify(event.headers));
 
-  // 获取 serverlessExpress 实例
-  const server = await bootstrapServer();
+  try {
+    // 获取 serverlessExpress 实例
+    const server = await bootstrapServer();
 
-  // 处理请求
-  return server(event, context, callback);
+    // 处理请求
+    console.log('开始处理请求');
+    return server(event, context, callback);
+  } catch (error) {
+    // 捕获并记录错误
+    console.error('处理请求时发生错误:', error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        error: '服务器内部错误，请稍后再试',
+        details: error.message,
+      }),
+      headers: { 'Content-Type': 'application/json' },
+    };
+  }
 };
