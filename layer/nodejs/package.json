@@ -1,0 +1,21 @@
+{
+  "name": "nestjs-blog-dependencies",
+  "version": "1.0.0",
+  "description": "NestJS Blog Lambda Layer Dependencies",
+  "dependencies": {
+    "@nestjs/axios": "1.0.1",
+    "@nestjs/common": "^9.0.11",
+    "@nestjs/config": "2.0.0",
+    "@nestjs/core": "^9.0.0",
+    "@nestjs/platform-express": "^9.0.0",
+    "@prisma/client": "^6.10.1",
+    "@types/aws-lambda": "^8.10.149",
+    "@vendia/serverless-express": "^4.12.6",
+    "axios": "^1.10.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
+    "express": "^5.1.0",
+    "prisma": "^6.10.1",
+    "rxjs": "^7.8.2"
+  }
+}

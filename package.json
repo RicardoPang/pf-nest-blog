@@ -11,21 +11,18 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "build:webpack": "webpack --config ./config/webpack/webpack.prod.js",
-    "prepare:lambda": "mkdir -p dist/prisma && cp prisma/schema.prisma dist/prisma/ && cd dist && npm init -y && npm install @nestjs/core @nestjs/common @nestjs/config @nestjs/platform-express @nestjs/axios @prisma/client prisma @vendia/serverless-express express rxjs class-validator class-transformer axios && npx prisma generate",
-    "webpack:prod": "webpack --config config/webpack/webpack.prod.js",
-    "sam:validate": "sam validate",
-    "sam:build": "pnpm run build:webpack && pnpm run prepare:lambda",
-    "sam:deploy": "sam deploy",
-    "sam:deploy:guided": "sam deploy --guided",
-    "sam:package": "sam package --output-template-file packaged.yaml",
-    "sam:local": "sam local start-api --port 3000",
-    "sam:logs": "sam logs -n NestJSBlogFunction --stack-name pf-nest-blog-new --tail",
+    
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "seed": "ts-node prisma/seed.ts",
+    
+    "deploy:prod": "./scripts/build.sh production",
+    "deploy:quick": "./scripts/build.sh production --deploy-only",
+    "deploy:layer": "./scripts/build.sh production --with-layer",
+    "deploy:dev": "./scripts/dev.sh",
+    "deploy:dev:rebuild": "./scripts/dev.sh --rebuild"
   },
   "dependencies": {
     "@nestjs/axios": "1.0.1",

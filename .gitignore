@@ -21,6 +21,7 @@ Thumbs.db
 
 # 项目总结文件夹 - 不需要提交
 项目总结/
+/项目总结
 
 # IDEs and editors
 /.idea
@@ -54,9 +55,15 @@ samconfig.toml
 /mini-lambda
 /optimized
 /tmp
+/deploy-temp
+/layer-temp
 
 # 临时文件
 response.json
+temp-env-vars.json
+deploy-result.json
+layer-result.json
+version.txt
 
 # 打包文件
 *.zip
@@ -66,4 +73,25 @@ response.json
 *.sqlite
 *.db
 
-/项目总结
+# AWS配置文件
+aws-manual-config.json
+
+# 部署相关文件
+lambda-deployment.zip
+layer-deployment.zip
+
+# 依赖缓存
+.pnpm-store/
+.npm/
+
+# 备份文件
+*.bak
+*.backup
+
+# 临时编辑器文件
+*~
+.#*
+\#*#
+
+# 系统缓存
+.cache/

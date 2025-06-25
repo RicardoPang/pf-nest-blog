@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(aws lambda get-function:*)",
+      "Bash(aws lambda list-layers:*)",
+      "Bash(aws apigateway:*)",
+      "Bash(aws s3api:*)",
+      "Bash(aws cloudfront:*)",
+      "Bash(mkdir:*)",
+      "Bash(chmod:*)",
+      "Bash(npm run manual:config:*)",
+      "Bash(npm run manual:env:*)",
+      "Bash(node:*)",
+      "Bash(npm run manual:full:*)",
+      "Bash(ls:*)",
+      "Bash(aws s3 ls:*)"
+    ],
+    "deny": []
+  }
+}
